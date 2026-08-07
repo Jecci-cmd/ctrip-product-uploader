@@ -9,15 +9,45 @@ import { extractMaterial } from './material.js';
 import { saveCtripDraft, submitItineraryReview } from './ctrip-adapter.js';
 import { validateProduct } from './validate.js';
 import { createRecord, getRecord, listRecords, updateRecord, updateRecordState } from './store.js';
+import { createAccessAuth } from './access-auth.js';
+import { CtripLoginManager } from './ctrip-login-manager.js';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 20 * 1024 * 1024, files: 2 } });
 const jobs = new Map();
+const access = createAccessAuth();
+const ctripLogin = new CtripLoginManager();
 const cleanError = (error) => String(error?.message || error).replace(/\u001b\[[0-9;]*m/g, '').replace(/Call log:[\s\S]*/m, '').trim();
 
 app.use(express.json({ limit: '2mb' }));
 app.use(express.static(path.resolve(here, '..', 'public')));
+
+app.get('/api/access/status', (req, res) => res.json({ authenticationRequired: access.enabled, authenticated: access.authenticated(req) }));
+app.post('/api/access/login', (req, res) => access.login(req, res));
+app.post('/api/access/logout', (req, res) => access.logout(req, res));
+app.use('/api', access.requireAccess);
+
+app.post('/api/ctrip-login/start', async (req, res, next) => {
+  try { res.status(201).json(await ctripLogin.start(req.body?.username, req.body?.password)); }
+  catch (error) { next(error); }
+});
+app.post('/api/ctrip-login/:id/code', async (req, res, next) => {
+  try { res.json(await ctripLogin.submitCode(req.params.id, req.body?.code)); }
+  catch (error) { next(error); }
+});
+app.post('/api/ctrip-login/:id/refresh', async (req, res, next) => {
+  try { res.json(await ctripLogin.refresh(req.params.id)); }
+  catch (error) { next(error); }
+});
+app.get('/api/ctrip-login/:id/screenshot', async (req, res, next) => {
+  try { res.type('png').set('Cache-Control', 'no-store').send(await ctripLogin.screenshot(req.params.id)); }
+  catch (error) { next(error); }
+});
+app.delete('/api/ctrip-login/:id', async (req, res, next) => {
+  try { await ctripLogin.cancel(req.params.id); res.json({ ok: true }); }
+  catch (error) { next(error); }
+});
 
 app.get('/api/health', async (_req, res) => res.json({
   ok: true,
@@ -124,4 +154,8 @@ app.use((error, _req, res, _next) => {
 });
 
 const port = Number(process.env.PORT || 3000);
-app.listen(port, process.env.HOST || '127.0.0.1', () => console.log(`团队游录入助手：http://${process.env.HOST || '127.0.0.1'}:${port}`));
+const host = process.env.HOST || '127.0.0.1';
+if (!['127.0.0.1', 'localhost', '::1'].includes(host) && !access.enabled) {
+  throw new Error('非本机部署必须配置 APP_ACCESS_PASSWORD，拒绝启动未受保护的服务');
+}
+app.listen(port, host, () => console.log(`团队游录入助手：http://${host}:${port}`));

@@ -3,13 +3,83 @@ let currentId = '';
 let health = {};
 let currentValidation = null;
 let currentCtripProductId = '';
+let ctripLoginTaskId = '';
 
 async function request(url, options) {
   const response = await fetch(url, options);
   const body = await response.json().catch(() => ({}));
+  if (response.status === 401 && !url.startsWith('/api/access/')) showAccessGate();
   if (!response.ok) throw new Error(body.error || `请求失败 ${response.status}`);
   return body;
 }
+
+function showAccessGate() {
+  $('#accessGate').classList.remove('hidden');
+  $('#appShell').classList.add('hidden');
+}
+
+function showApp() {
+  $('#accessGate').classList.add('hidden');
+  $('#appShell').classList.remove('hidden');
+}
+
+async function refreshHealth() {
+  health = await request('/api/health');
+  $('#health').textContent = `${health.aiConfigured ? 'AI 已配置' : 'AI 未配置（无法上传）'} · ${health.ctripLoggedIn ? '携程已登录' : '携程未登录'}`;
+  $('#ctripConnectionState').textContent = health.ctripLoggedIn ? '当前服务器已有可复用的携程登录会话' : '请先登录携程，再进行自动录入';
+  $('#ctripLoginForm').classList.toggle('hidden', health.ctripLoggedIn);
+  if (health.ctripLoggedIn) $('#ctripVerify').classList.add('hidden');
+  if (currentValidation) renderValidation(currentValidation);
+}
+
+function renderCtripLogin(task) {
+  ctripLoginTaskId = task.id || ctripLoginTaskId;
+  $('#ctripLoginMessage').textContent = task.message || '';
+  $('#ctripPassword').value = '';
+  if (task.status === 'success') {
+    $('#ctripVerify').classList.add('hidden');
+    refreshHealth().catch((error) => { $('#ctripConnectionState').textContent = error.message; });
+    return;
+  }
+  $('#ctripVerify').classList.remove('hidden');
+  if (ctripLoginTaskId) $('#ctripScreenshot').src = `/api/ctrip-login/${encodeURIComponent(ctripLoginTaskId)}/screenshot?t=${Date.now()}`;
+  $('#ctripCodeForm').classList.toggle('hidden', task.status !== 'verification_required');
+}
+
+$('#accessForm').addEventListener('submit', async (event) => {
+  event.preventDefault();
+  const button = event.submitter; button.disabled = true;
+  try {
+    await request('/api/access/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ password: $('#accessPassword').value }) });
+    $('#accessPassword').value = ''; $('#accessMessage').textContent = ''; showApp(); await refreshHealth(); restoreRecord();
+  } catch (error) { $('#accessMessage').textContent = error.message; }
+  finally { button.disabled = false; }
+});
+
+$('#ctripLoginForm').addEventListener('submit', async (event) => {
+  event.preventDefault();
+  const button = event.submitter; button.disabled = true; $('#ctripConnectionState').textContent = '正在登录携程…';
+  try {
+    const task = await request('/api/ctrip-login/start', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username: $('#ctripUsername').value, password: $('#ctripPassword').value }) });
+    renderCtripLogin(task); $('#ctripConnectionState').textContent = task.message;
+  } catch (error) { $('#ctripPassword').value = ''; $('#ctripConnectionState').textContent = error.message; }
+  finally { button.disabled = false; }
+});
+
+$('#ctripCodeForm').addEventListener('submit', async (event) => {
+  event.preventDefault();
+  const button = event.submitter; button.disabled = true;
+  try {
+    const task = await request(`/api/ctrip-login/${encodeURIComponent(ctripLoginTaskId)}/code`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code: $('#ctripCode').value }) });
+    $('#ctripCode').value = ''; renderCtripLogin(task);
+  } catch (error) { $('#ctripLoginMessage').textContent = error.message; }
+  finally { button.disabled = false; }
+});
+
+$('#refreshCtripLogin').addEventListener('click', async () => {
+  try { renderCtripLogin(await request(`/api/ctrip-login/${encodeURIComponent(ctripLoginTaskId)}/refresh`, { method: 'POST' })); }
+  catch (error) { $('#ctripLoginMessage').textContent = error.message; }
+});
 
 function renderValidation(validation) {
   currentValidation = validation;
@@ -104,7 +174,15 @@ $('#continueStage2').addEventListener('click', async () => {
   } catch (error) { $('#job').classList.remove('hidden'); $('#job').textContent = error.message; button.disabled = false; }
 });
 
-request('/api/health').then((x) => { health = x; $('#health').textContent = `${x.aiConfigured ? 'AI 已配置' : 'AI 未配置（无法上传）'} · ${x.ctripLoggedIn ? '携程已登录' : '携程未登录'}`; if (currentValidation) renderValidation(currentValidation); }).catch(() => { $('#health').textContent = '服务异常'; });
-
 const restoreRecordId = new URLSearchParams(location.search).get('record');
-if (restoreRecordId) request(`/api/products/${encodeURIComponent(restoreRecordId)}`).then(showRecord).catch((error) => { $('#uploadMessage').textContent = `加载审核记录失败：${error.message}`; });
+let restored = false;
+function restoreRecord() {
+  if (!restoreRecordId || restored) return;
+  restored = true;
+  request(`/api/products/${encodeURIComponent(restoreRecordId)}`).then(showRecord).catch((error) => { $('#uploadMessage').textContent = `加载审核记录失败：${error.message}`; });
+}
+
+request('/api/access/status').then(async (status) => {
+  if (!status.authenticated) return showAccessGate();
+  showApp(); await refreshHealth(); restoreRecord();
+}).catch(() => { showAccessGate(); $('#accessMessage').textContent = '服务异常，请联系管理员'; });
