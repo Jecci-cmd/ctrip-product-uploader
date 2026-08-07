@@ -5,7 +5,7 @@ import YAML from 'yaml';
 const input = process.argv[2];
 const output = process.argv[3] || 'product.yaml';
 if (!input) {
-  console.error('用法：npm run prepare -- 产品资料.txt [product.yaml]');
+  console.error('用法：npm run prepare-product -- 产品资料.txt [product.yaml]');
   process.exit(2);
 }
 

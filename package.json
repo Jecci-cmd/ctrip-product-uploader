@@ -7,7 +7,7 @@
     "start": "node src/server.js",
     "test": "node --test",
     "login": "node src/login.js",
-    "prepare": "node src/prepare.js",
+    "prepare-product": "node src/prepare.js",
     "inspect": "node src/inspect.js",
     "upload": "node src/upload.js"
   },
