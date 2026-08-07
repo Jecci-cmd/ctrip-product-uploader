@@ -81,3 +81,5 @@ node --check src/ctrip-adapter.js
 ```
 
 服务器使用 Chromium时，在 `app.env` 设置 `CHROME_PATH=/usr/bin/chromium`。绑定 Cloudflare HTTPS 域名后，将 `COOKIE_SECURE` 改为 `1`。
+
+`deploy/cloudflared-quick.service` 仅用于尚未绑定域名时的临时 HTTPS验证，生成的 `trycloudflare.com` 地址可能在服务重启后变化；生产环境应改用 Cloudflare命名隧道和自有域名。

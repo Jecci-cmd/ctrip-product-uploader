@@ -1,0 +1,17 @@
+[Unit]
+Description=Cloudflare Quick Tunnel for Ctrip Product Uploader
+After=network-online.target ctrip-uploader.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=ctripapp
+Group=ctripapp
+ExecStart=/usr/local/bin/cloudflared tunnel --no-autoupdate --url http://127.0.0.1:3000
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target
