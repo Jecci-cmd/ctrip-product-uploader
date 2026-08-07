@@ -1,0 +1,9 @@
+node_modules/
+.auth/
+artifacts/
+data/
+uploads/
+assets/
+examples/
+.env
+*.log

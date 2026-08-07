@@ -1,0 +1,10 @@
+.plain-input { border: 1px solid #cbd7e4; border-radius: 9px; padding: 11px 12px; min-width: 190px; }
+.job { margin-top: 14px; padding: 16px; border: 1px solid #bdd8c8; border-radius: 10px; background: #f1faf4; }
+.job p { margin: 8px 0; }
+.job a { color: #1267bd; }
+.optional { background: #f7fafc; }
+@media (max-width: 850px) { .draft-action { align-items: stretch; flex-direction: column; } }
+.approval { margin-top: 14px; padding: 18px; border: 1px solid #e4c46b; border-radius: 10px; background: #fffaf0; }
+.approval label { display: block; margin: 12px 0; }
+.approval input[type="checkbox"] { display: inline-block; margin-right: 8px; }
+.id-field { display: flex; align-items: center; gap: 8px; white-space: nowrap; color: #52647a; }

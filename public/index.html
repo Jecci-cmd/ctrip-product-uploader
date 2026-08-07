@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="zh-CN">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>团队游录入助手</title><link rel="stylesheet" href="/styles.css"><link rel="stylesheet" href="/extra.css"></head>
+<body>
+  <header><div><span class="eyebrow">CTRIP DRAFT WORKSPACE</span><h1>团队游录入助手</h1><p>上传资料，生成合规草稿；携程提交审核和上线始终由员工完成。</p></div><div id="health" class="status">检查服务中</div></header>
+  <main>
+    <section class="panel upload-panel">
+      <div><h2>上传产品资料</h2><p>支持 TXT、Markdown、DOCX、文本型 PDF；封面可选，未提供时由员工在携程补充。</p></div>
+      <form id="uploadForm"><label class="drop"><input id="material" name="material" type="file" accept=".txt,.md,.docx,.pdf,text/plain,application/pdf" required><span id="fileLabel">选择产品资料</span></label><label class="drop optional"><input id="cover" name="cover" type="file" accept="image/jpeg,image/png,image/webp"><span id="coverLabel">可选：授权封面图</span></label><button type="submit">生成结构化草稿</button></form>
+      <div id="uploadMessage" class="message"></div>
+    </section>
+    <section id="workspace" class="workspace hidden">
+      <aside class="panel"><h2>校验结果</h2><div id="summary"></div><div id="issues"></div></aside>
+      <section class="panel editor"><div class="toolbar"><div><span id="parser" class="badge"></span><h2 id="title">产品草稿</h2></div><button id="save" type="button">保存内部草稿</button></div><p id="warning" class="warning"></p><textarea id="jsonEditor" spellcheck="false"></textarea><div class="draft-action"><label class="id-field">携程产品ID<input id="ctripProductId" class="plain-input" placeholder="留空则创建新产品"></label><button id="ctripDraft" type="button" disabled>保存到携程草稿</button><small>测试已有产品时必须填写产品ID；留空会创建新产品。</small></div><div id="job" class="job hidden"></div><div id="employeeApproval" class="approval hidden"><h3>员工行程审核</h3><p>请先打开携程链接核对行程。确认无误后，系统将以你的明确授权代为点击“提交审核并下一步”。</p><label><input id="approvalCheck" type="checkbox"> 我已逐项核对行程，并同意提交携程行程审核</label><button id="continueStage2" type="button" disabled>审核通过并继续填写</button></div></section>
+    </section>
+  </main>
+  <script type="module" src="/app.js"></script>
+</body></html>

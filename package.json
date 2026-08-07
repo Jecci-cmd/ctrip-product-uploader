@@ -1,0 +1,22 @@
+{
+  "name": "ctrip-product-uploader",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node src/server.js",
+    "test": "node --test",
+    "login": "node src/login.js",
+    "prepare": "node src/prepare.js",
+    "inspect": "node src/inspect.js",
+    "upload": "node src/upload.js"
+  },
+  "dependencies": {
+    "express": "^5.2.1",
+    "mammoth": "^1.12.0",
+    "multer": "^2.2.0",
+    "pdf-parse": "^1.1.1",
+    "playwright-core": "1.54.2",
+    "yaml": "2.8.0"
+  }
+}
