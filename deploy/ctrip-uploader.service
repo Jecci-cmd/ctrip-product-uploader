@@ -1,0 +1,23 @@
+[Unit]
+Description=Ctrip Product Uploader
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=ctripapp
+Group=ctripapp
+WorkingDirectory=/opt/ctrip-product-uploader
+EnvironmentFile=/etc/ctrip-uploader/app.env
+EnvironmentFile=/etc/ctrip-uploader/access.env
+ExecStart=/usr/bin/node src/server.js
+Restart=on-failure
+RestartSec=5
+TimeoutStopSec=30
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ReadWritePaths=/opt/ctrip-product-uploader/.auth /opt/ctrip-product-uploader/data /opt/ctrip-product-uploader/uploads /opt/ctrip-product-uploader/artifacts
+
+[Install]
+WantedBy=multi-user.target

@@ -68,3 +68,16 @@ node --check src/ctrip-adapter.js
 ```
 
 页面改版时可运行 `npm run inspect`。真实端到端测试脚本 `scripts/e2e-test-draft.js` 只应对明确的测试产品使用；它不会提交审核或上线。
+
+## Linux 服务器运行
+
+仓库的 `deploy/` 目录提供 systemd 和 Nginx模板。应用由专用 `ctripapp` 用户运行，Node.js仅监听 `127.0.0.1:3000`，Nginx负责公网入口。将配置分别安装为：
+
+```text
+/etc/systemd/system/ctrip-uploader.service
+/etc/nginx/sites-available/ctrip-uploader
+/etc/ctrip-uploader/app.env
+/etc/ctrip-uploader/access.env
+```
+
+服务器使用 Chromium时，在 `app.env` 设置 `CHROME_PATH=/usr/bin/chromium`。绑定 Cloudflare HTTPS 域名后，将 `COOKIE_SECURE` 改为 `1`。
