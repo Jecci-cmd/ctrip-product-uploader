@@ -76,6 +76,25 @@ $('#ctripCodeForm').addEventListener('submit', async (event) => {
   finally { button.disabled = false; }
 });
 
+$('#sendCtripCode').addEventListener('click', async (event) => {
+  const button = event.currentTarget; button.disabled = true;
+  try { renderCtripLogin(await request(`/api/ctrip-login/${encodeURIComponent(ctripLoginTaskId)}/send-code`, { method: 'POST' })); }
+  catch (error) { $('#ctripLoginMessage').textContent = error.message; }
+  finally { button.disabled = false; }
+});
+
+$('#ctripScreenshot').addEventListener('click', async (event) => {
+  if (!ctripLoginTaskId || !event.currentTarget.naturalWidth) return;
+  const image = event.currentTarget;
+  const rect = image.getBoundingClientRect();
+  const x = (event.clientX - rect.left) * image.naturalWidth / rect.width;
+  const y = (event.clientY - rect.top) * image.naturalHeight / rect.height;
+  $('#ctripLoginMessage').textContent = '正在操作携程验证画面…';
+  try {
+    renderCtripLogin(await request(`/api/ctrip-login/${encodeURIComponent(ctripLoginTaskId)}/click`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ x, y }) }));
+  } catch (error) { $('#ctripLoginMessage').textContent = error.message; }
+});
+
 $('#refreshCtripLogin').addEventListener('click', async () => {
   try { renderCtripLogin(await request(`/api/ctrip-login/${encodeURIComponent(ctripLoginTaskId)}/refresh`, { method: 'POST' })); }
   catch (error) { $('#ctripLoginMessage').textContent = error.message; }

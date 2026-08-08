@@ -6,6 +6,7 @@ import { AUTH_FILE, ensurePrivateDir, launch } from './browser.js';
 const LOGIN_URL = 'https://vbooking.ctrip.com/ivbk/accountV2/login';
 const CODE_INPUT = 'input:visible[placeholder*="验证码"], input:visible[placeholder*="校验码"], input:visible[name*="code" i], input:visible[id*="code" i]';
 const VERIFY_BUTTONS = ['验证', '确定', '提交', '登录'];
+const SEND_CODE_TEXT = /发送验证码|获取验证码|获取短信验证码|发送短信|重新发送/;
 
 export class CtripLoginManager {
   constructor({ launchBrowser = launch, authFile = AUTH_FILE, ttlMs = 10 * 60 * 1000 } = {}) {
@@ -79,6 +80,35 @@ export class CtripLoginManager {
     if (!clicked) await input.press('Enter');
     await task.page.waitForTimeout(3_000);
     return this.evaluate(task);
+  }
+
+  async sendCode(id) {
+    const task = this.getActive(id);
+    const candidates = task.page.locator('button:visible, a:visible, [role="button"]:visible').filter({ hasText: SEND_CODE_TEXT });
+    const count = await candidates.count();
+    if (!count) { const error = new Error('未找到“发送验证码”按钮，请直接点击下方验证画面中的对应位置'); error.status = 409; throw error; }
+    const button = candidates.first();
+    if (typeof button.isDisabled === 'function' && await button.isDisabled().catch(() => false)) { const error = new Error('发送验证码按钮暂不可用，请稍后再试'); error.status = 409; throw error; }
+    await button.click();
+    await task.page.waitForTimeout(1_500);
+    task.status = 'verification_required';
+    task.message = '已点击发送验证码，请查看手机短信；如出现图片验证，请直接点击下方验证画面';
+    return this.publicTask(task);
+  }
+
+  async clickAt(id, x, y) {
+    const task = this.getActive(id);
+    const point = { x: Number(x), y: Number(y) };
+    const viewport = task.page.viewportSize();
+    if (!viewport || !Number.isFinite(point.x) || !Number.isFinite(point.y) || point.x < 0 || point.y < 0 || point.x > viewport.width || point.y > viewport.height) {
+      const error = new Error('验证画面点击位置无效，请刷新后重试'); error.status = 400; throw error;
+    }
+    await task.page.mouse.click(point.x, point.y);
+    await task.page.waitForTimeout(1_000);
+    if (!task.page.url().includes('/login')) return this.complete(task);
+    task.status = 'verification_required';
+    task.message = '已点击验证画面，请按画面提示继续操作或刷新状态';
+    return this.publicTask(task);
   }
 
   async refresh(id) {

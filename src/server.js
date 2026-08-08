@@ -36,6 +36,14 @@ app.post('/api/ctrip-login/:id/code', async (req, res, next) => {
   try { res.json(await ctripLogin.submitCode(req.params.id, req.body?.code)); }
   catch (error) { next(error); }
 });
+app.post('/api/ctrip-login/:id/send-code', async (req, res, next) => {
+  try { res.json(await ctripLogin.sendCode(req.params.id)); }
+  catch (error) { next(error); }
+});
+app.post('/api/ctrip-login/:id/click', async (req, res, next) => {
+  try { res.json(await ctripLogin.clickAt(req.params.id, req.body?.x, req.body?.y)); }
+  catch (error) { next(error); }
+});
 app.post('/api/ctrip-login/:id/refresh', async (req, res, next) => {
   try { res.json(await ctripLogin.refresh(req.params.id)); }
   catch (error) { next(error); }
