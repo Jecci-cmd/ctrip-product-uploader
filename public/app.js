@@ -11,7 +11,15 @@ let remoteTaskId = '';
 let remotePoll = null;
 
 async function request(url, options) {
-  const response = await fetch(url, options);
+  let response;
+  try { response = await fetch(url, options); }
+  catch (firstError) {
+    const method = options?.method || 'GET';
+    if (method !== 'GET' && url !== '/api/access/login') throw new Error('无法连接服务器，请检查网络后重试');
+    await new Promise((resolve) => setTimeout(resolve, 800));
+    try { response = await fetch(url, options); }
+    catch { throw new Error('无法连接服务器，Cloudflare临时通道可能正在重连，请稍后刷新页面'); }
+  }
   const body = await response.json().catch(() => ({}));
   if (response.status === 401 && !url.startsWith('/api/access/')) showAccessGate();
   if (!response.ok) throw new Error(body.error || `请求失败 ${response.status}`);
