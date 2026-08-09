@@ -42,23 +42,30 @@ class FakePage {
 }
 
 function fakeLauncher(needsCode, captured) {
-  return async () => {
+  return async (options) => {
     const page = new FakePage(needsCode);
     const context = { newPage: async () => page, storageState: async ({ path: output }) => fs.writeFile(output, '{"cookies":[]}') };
     const browser = { newContext: async () => context, close: async () => { captured.closed = true; } };
-    Object.assign(captured, { page });
+    Object.assign(captured, { page, launchOptions: options });
     return browser;
   };
+}
+
+function fakeRemote(captured) {
+  return async () => ({ display: ':99', port: 5901, stop: async () => { captured.remoteStopped = true; } });
 }
 
 test('账号密码正确时保存携程会话且不保存密码', async () => {
   const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'ctrip-login-'));
   const authFile = path.join(dir, 'auth', 'ctrip.json');
   const captured = {};
-  const manager = new CtripLoginManager({ launchBrowser: fakeLauncher(false, captured), authFile });
+  const manager = new CtripLoginManager({ launchBrowser: fakeLauncher(false, captured), remoteDesktopFactory: fakeRemote(captured), authFile });
   const result = await manager.start('employee', 'secret-password');
   assert.equal(result.status, 'success');
   assert.equal(captured.closed, true);
+  assert.equal(captured.remoteStopped, true);
+  assert.equal(captured.launchOptions.headless, false);
+  assert.equal(captured.launchOptions.env.DISPLAY, ':99');
   assert.equal(await fs.readFile(authFile, 'utf8'), '{"cookies":[]}');
   assert.doesNotMatch(JSON.stringify([...manager.tasks.values()]), /secret-password/);
 });
@@ -66,7 +73,7 @@ test('需要验证码时等待员工输入，验证成功后保存会话', async
   const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'ctrip-code-'));
   const authFile = path.join(dir, 'auth', 'ctrip.json');
   const captured = {};
-  const manager = new CtripLoginManager({ launchBrowser: fakeLauncher(true, captured), authFile });
+  const manager = new CtripLoginManager({ launchBrowser: fakeLauncher(true, captured), remoteDesktopFactory: fakeRemote(captured), authFile });
   const pending = await manager.start('employee', 'secret-password');
   assert.equal(pending.status, 'verification_required');
   const result = await manager.submitCode(pending.id, '123456');
@@ -77,7 +84,7 @@ test('需要验证码时等待员工输入，验证成功后保存会话', async
 test('员工可以发送短信验证码并点击图片验证画面', async () => {
   const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'ctrip-interaction-'));
   const captured = {};
-  const manager = new CtripLoginManager({ launchBrowser: fakeLauncher(true, captured), authFile: path.join(dir, 'ctrip.json') });
+  const manager = new CtripLoginManager({ launchBrowser: fakeLauncher(true, captured), remoteDesktopFactory: fakeRemote(captured), authFile: path.join(dir, 'ctrip.json') });
   const pending = await manager.start('employee', 'secret-password');
   const sent = await manager.sendCode(pending.id);
   assert.equal(sent.status, 'verification_required');

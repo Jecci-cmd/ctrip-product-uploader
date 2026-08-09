@@ -1,9 +1,14 @@
+import RFB from '/novnc/core/rfb.js';
+
 const $ = (selector) => document.querySelector(selector);
 let currentId = '';
 let health = {};
 let currentValidation = null;
 let currentCtripProductId = '';
 let ctripLoginTaskId = '';
+let remoteRfb = null;
+let remoteTaskId = '';
+let remotePoll = null;
 
 async function request(url, options) {
   const response = await fetch(url, options);
@@ -37,13 +42,48 @@ function renderCtripLogin(task) {
   $('#ctripLoginMessage').textContent = task.message || '';
   $('#ctripPassword').value = '';
   if (task.status === 'success') {
+    stopRemoteBrowser();
     $('#ctripVerify').classList.add('hidden');
     refreshHealth().catch((error) => { $('#ctripConnectionState').textContent = error.message; });
     return;
   }
   $('#ctripVerify').classList.remove('hidden');
+  if (task.remoteAvailable) startRemoteBrowser(task.id);
   if (ctripLoginTaskId) $('#ctripScreenshot').src = `/api/ctrip-login/${encodeURIComponent(ctripLoginTaskId)}/screenshot?t=${Date.now()}`;
   $('#ctripCodeForm').classList.toggle('hidden', task.status !== 'verification_required');
+}
+
+function stopRemoteBrowser() {
+  clearInterval(remotePoll); remotePoll = null;
+  remoteRfb?.disconnect(); remoteRfb = null; remoteTaskId = '';
+  $('#vncScreen').classList.add('hidden');
+  $('#vncScreen').replaceChildren();
+}
+
+function startRemoteBrowser(taskId) {
+  if (remoteRfb && remoteTaskId === taskId) return;
+  stopRemoteBrowser();
+  remoteTaskId = taskId;
+  const screen = $('#vncScreen');
+  screen.classList.remove('hidden');
+  const protocol = location.protocol === 'https:' ? 'wss' : 'ws';
+  remoteRfb = new RFB(screen, `${protocol}://${location.host}/api/ctrip-login/${encodeURIComponent(taskId)}/vnc`, { shared: true });
+  remoteRfb.scaleViewport = true;
+  remoteRfb.resizeSession = false;
+  remoteRfb.viewOnly = false;
+  remoteRfb.focusOnClick = true;
+  remoteRfb.addEventListener('connect', () => { $('#ctripLoginMessage').textContent = '远程携程浏览器已连接，请人工完成滑动拼图或其他验证'; });
+  remoteRfb.addEventListener('securityfailure', () => { $('#ctripLoginMessage').textContent = '远程验证画面连接失败，请刷新后重试'; });
+  remoteRfb.addEventListener('disconnect', (event) => { if (!event.detail.clean && remoteTaskId) $('#ctripLoginMessage').textContent = '远程验证画面已断开，请刷新状态或重新登录'; });
+  remotePoll = setInterval(async () => {
+    if (!remoteTaskId) return;
+    try {
+      const task = await request(`/api/ctrip-login/${encodeURIComponent(remoteTaskId)}/refresh`, { method: 'POST' });
+      if (task.status === 'success') renderCtripLogin(task);
+    } catch (error) {
+      if (!/不存在|结束/.test(error.message)) $('#ctripLoginMessage').textContent = error.message;
+    }
+  }, 2500);
 }
 
 $('#accessForm').addEventListener('submit', async (event) => {

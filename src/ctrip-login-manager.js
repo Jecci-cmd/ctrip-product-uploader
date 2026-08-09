@@ -2,6 +2,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { AUTH_FILE, ensurePrivateDir, launch } from './browser.js';
+import { startRemoteDesktop } from './remote-desktop.js';
 
 const LOGIN_URL = 'https://vbooking.ctrip.com/ivbk/accountV2/login';
 const CODE_INPUT = 'input:visible[placeholder*="验证码"], input:visible[placeholder*="校验码"], input:visible[name*="code" i], input:visible[id*="code" i]';
@@ -9,15 +10,16 @@ const VERIFY_BUTTONS = ['验证', '确定', '提交', '登录'];
 const SEND_CODE_TEXT = /发送验证码|获取验证码|获取短信验证码|发送短信|重新发送/;
 
 export class CtripLoginManager {
-  constructor({ launchBrowser = launch, authFile = AUTH_FILE, ttlMs = 10 * 60 * 1000 } = {}) {
+  constructor({ launchBrowser = launch, remoteDesktopFactory = startRemoteDesktop, authFile = AUTH_FILE, ttlMs = 10 * 60 * 1000 } = {}) {
     this.launchBrowser = launchBrowser;
+    this.remoteDesktopFactory = remoteDesktopFactory;
     this.authFile = authFile;
     this.ttlMs = ttlMs;
     this.tasks = new Map();
   }
 
   publicTask(task) {
-    return { id: task.id, status: task.status, message: task.message, requiresCode: task.status === 'verification_required', createdAt: task.createdAt };
+    return { id: task.id, status: task.status, message: task.message, requiresCode: task.status === 'verification_required', remoteAvailable: Boolean(task.remote), createdAt: task.createdAt };
   }
 
   async start(username, password) {
@@ -25,10 +27,14 @@ export class CtripLoginManager {
       const error = new Error('请输入携程账号和密码'); error.status = 400; throw error;
     }
     await this.cancelAll();
-    const browser = await this.launchBrowser({ headless: true });
-    const context = await browser.newContext();
-    const page = await context.newPage();
-    const task = { id: randomUUID(), browser, context, page, status: 'starting', message: '正在连接携程', createdAt: new Date().toISOString() };
+    const remote = await this.remoteDesktopFactory();
+    let browser;
+    try { browser = await this.launchBrowser({ headless: false, env: { ...process.env, DISPLAY: remote.display } }); }
+    catch (error) { await remote.stop(); throw error; }
+    let context; let page;
+    try { context = await browser.newContext(); page = await context.newPage(); }
+    catch (error) { await browser.close().catch(() => {}); await remote.stop().catch(() => {}); throw error; }
+    const task = { id: randomUUID(), browser, context, page, remote, status: 'starting', message: '正在连接携程', createdAt: new Date().toISOString() };
     this.tasks.set(task.id, task);
     task.timer = setTimeout(() => this.cancel(task.id, '登录任务已超时，请重新开始').catch(() => {}), this.ttlMs);
     task.timer.unref?.();
@@ -141,7 +147,8 @@ export class CtripLoginManager {
   async closeTask(task, keepRecord) {
     clearTimeout(task.timer);
     await task.browser?.close().catch(() => {});
-    delete task.browser; delete task.context; delete task.page; delete task.timer;
+    await task.remote?.stop().catch(() => {});
+    delete task.browser; delete task.context; delete task.page; delete task.remote; delete task.timer;
     if (!keepRecord) this.tasks.delete(task.id);
   }
 
@@ -154,5 +161,9 @@ export class CtripLoginManager {
 
   async cancelAll() {
     await Promise.all([...this.tasks.values()].filter((task) => task.page).map((task) => this.cancel(task.id)));
+  }
+
+  vncPort(id) {
+    return this.getActive(id).remote?.port;
   }
 }

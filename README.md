@@ -29,7 +29,7 @@ cp .env.example .env
 
 员工先在网页输入 `APP_ACCESS_PASSWORD` 进入内部系统。携程首次登录或会话过期时，可以直接在网页“连接携程账号”区域输入携程账号和密码；密码只用于当前登录请求，不写入磁盘，登录成功后仅将携程 Cookie 保存到 `.auth/ctrip.json`。
 
-携程要求短信或图片文本验证码时，员工可在网页点击“发送短信验证码”并输入收到的验证码。网页中的验证截图支持直接点击，点击坐标会传递给服务器端 Chromium，可完成人工图片点选、勾选和按钮操作。滑块拖动等连续手势不能由 AI 绕过，需要管理员通过可视化浏览器人工完成。命令行备用登录方式为：
+携程要求安全验证时，系统会启动临时 Xvfb可视化桌面，并通过受员工会话保护的 noVNC连接把真实 Chromium嵌入网页。员工可亲手拖动拼图、图片点选、点击发送短信验证码并输入验证码；AI不识别或绕过验证码。登录成功后系统只保存携程 Cookie，并关闭临时浏览器和远程桌面。命令行备用登录方式为：
 
 ```bash
 read 'CTRIP_USERNAME?携程账号: '
@@ -80,6 +80,6 @@ node --check src/ctrip-adapter.js
 /etc/ctrip-uploader/access.env
 ```
 
-服务器使用 Chromium时，在 `app.env` 设置 `CHROME_PATH=/usr/bin/chromium`。绑定 Cloudflare HTTPS 域名后，将 `COOKIE_SECURE` 改为 `1`。
+服务器需要安装 `chromium xvfb x11vnc`。使用 Chromium时，在 `app.env` 设置 `CHROME_PATH=/usr/bin/chromium`。绑定 Cloudflare HTTPS 域名后，将 `COOKIE_SECURE` 改为 `1`。noVNC WebSocket复用应用端口并受内部员工会话鉴权，不应单独开放 VNC端口。
 
 `deploy/cloudflared-quick.service` 仅用于尚未绑定域名时的临时 HTTPS验证，生成的 `trycloudflare.com` 地址可能在服务重启后变化；生产环境应改用 Cloudflare命名隧道和自有域名。

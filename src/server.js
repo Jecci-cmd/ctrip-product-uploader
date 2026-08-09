@@ -4,6 +4,8 @@ import path from 'node:path';
 import fs from 'node:fs/promises';
 import { randomUUID } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
+import net from 'node:net';
+import { WebSocket, WebSocketServer } from 'ws';
 import { parseMaterial } from './parser.js';
 import { extractMaterial } from './material.js';
 import { saveCtripDraft, submitItineraryReview } from './ctrip-adapter.js';
@@ -22,6 +24,7 @@ const cleanError = (error) => String(error?.message || error).replace(/\u001b\[[
 
 app.use(express.json({ limit: '2mb' }));
 app.use(express.static(path.resolve(here, '..', 'public')));
+app.use('/novnc', express.static(path.resolve(here, '..', 'node_modules', '@novnc', 'novnc')));
 
 app.get('/api/access/status', (req, res) => res.json({ authenticationRequired: access.enabled, authenticated: access.authenticated(req) }));
 app.post('/api/access/login', (req, res) => access.login(req, res));
@@ -166,4 +169,24 @@ const host = process.env.HOST || '127.0.0.1';
 if (!['127.0.0.1', 'localhost', '::1'].includes(host) && !access.enabled) {
   throw new Error('非本机部署必须配置 APP_ACCESS_PASSWORD，拒绝启动未受保护的服务');
 }
-app.listen(port, host, () => console.log(`团队游录入助手：http://${host}:${port}`));
+const server = app.listen(port, host, () => console.log(`团队游录入助手：http://${host}:${port}`));
+const vncSockets = new WebSocketServer({ noServer: true, handleProtocols: (protocols) => protocols.has('binary') ? 'binary' : false });
+
+server.on('upgrade', (request, socket, head) => {
+  const match = new URL(request.url, 'http://localhost').pathname.match(/^\/api\/ctrip-login\/([^/]+)\/vnc$/);
+  if (!match || !access.authenticated(request)) { socket.write('HTTP/1.1 401 Unauthorized\r\nConnection: close\r\n\r\n'); socket.destroy(); return; }
+  let vncPort;
+  try { vncPort = ctripLogin.vncPort(decodeURIComponent(match[1])); }
+  catch { socket.write('HTTP/1.1 404 Not Found\r\nConnection: close\r\n\r\n'); socket.destroy(); return; }
+  vncSockets.handleUpgrade(request, socket, head, (websocket) => vncSockets.emit('connection', websocket, vncPort));
+});
+
+vncSockets.on('connection', (websocket, vncPort) => {
+  const vnc = net.connect({ host: '127.0.0.1', port: vncPort });
+  websocket.on('message', (data) => { if (!vnc.destroyed) vnc.write(Buffer.from(data)); });
+  websocket.on('close', () => vnc.destroy());
+  websocket.on('error', () => vnc.destroy());
+  vnc.on('data', (data) => { if (websocket.readyState === WebSocket.OPEN) websocket.send(data); });
+  vnc.on('error', () => websocket.close());
+  vnc.on('close', () => websocket.close());
+});

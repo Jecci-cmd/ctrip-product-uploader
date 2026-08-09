@@ -22,3 +22,6 @@
 .verify-actions { display: flex; gap: 10px; flex-wrap: wrap; }
 .verify-tip { color: #725800; font-size: 14px; }
 .interactive-shot { cursor: crosshair; user-select: none; }
+.vnc-screen { width: 100%; height: min(72vh,720px); min-height: 480px; margin: 12px 0; overflow: hidden; border: 1px solid #8ba3bb; border-radius: 8px; background: #172234; }
+.vnc-screen canvas { width: 100% !important; height: 100% !important; }
+.verify details { margin-top: 12px; color: #52647a; }
