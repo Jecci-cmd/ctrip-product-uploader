@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="zh-CN">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width"><link rel="stylesheet" href="popup.css"><title>同步携程登录</title></head>
+<body>
+  <main>
+    <h1>同步携程登录</h1>
+    <ol>
+      <li>在当前 Edge/Chrome 中打开携程供应商后台。</li>
+      <li>正常完成账号、拼图和短信验证。</li>
+      <li>确认已经进入供应商后台，再点击下方按钮。</li>
+    </ol>
+    <label>录入助手网址<input id="serverUrl" type="url" placeholder="https://你的域名" required></label>
+    <label>内部访问密码<input id="accessPassword" type="password" autocomplete="current-password" required></label>
+    <button id="sync" type="button">检查并同步登录状态</button>
+    <button id="openCtrip" class="secondary" type="button">打开携程供应商登录页</button>
+    <p id="message" role="status"></p>
+    <small>扩展只上传适用于 vbooking.ctrip.com 的 Cookie；不会读取或上传携程密码、短信验证码。</small>
+  </main>
+  <script src="popup.js"></script>
+</body>
+</html>

@@ -1,0 +1,13 @@
+{
+  "manifest_version": 3,
+  "name": "携程团队游登录同步",
+  "version": "1.0.0",
+  "description": "将在本机完成验证的携程供应商登录会话同步到团队游录入助手。",
+  "permissions": ["cookies", "storage", "tabs", "scripting"],
+  "host_permissions": ["https://vbooking.ctrip.com/*", "https://*.ctrip.com/*"],
+  "optional_host_permissions": ["https://*/*", "http://*/*"],
+  "action": {
+    "default_title": "同步携程登录",
+    "default_popup": "popup.html"
+  }
+}

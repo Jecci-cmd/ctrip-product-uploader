@@ -9,7 +9,7 @@
   <header><div><span class="eyebrow">CTRIP DRAFT WORKSPACE</span><h1>团队游录入助手</h1><p>上传资料，生成合规草稿；携程提交审核和上线始终由员工完成。</p></div><div id="health" class="status">检查服务中</div></header>
   <main>
     <section id="ctripLoginPanel" class="panel ctrip-login-panel">
-      <div><h2>连接携程账号</h2><p>账号密码仅用于本次登录，不会保存；成功后只保存携程会话。</p><div id="ctripConnectionState" class="message"></div></div>
+      <div><h2>连接携程账号</h2><p>推荐员工在自己电脑的 Edge 登录携程，再用<a href="/ctrip-login-extension.zip" download>携程登录同步扩展</a>同步会话；首次安装说明见压缩包。下方服务器登录方式保留备用。</p><div id="ctripConnectionState" class="message"></div></div>
       <form id="ctripLoginForm"><input id="ctripUsername" class="plain-input" autocomplete="username" required placeholder="携程账号"><input id="ctripPassword" class="plain-input" type="password" autocomplete="current-password" required placeholder="携程密码"><button type="submit">登录携程</button></form>
       <div id="ctripVerify" class="verify hidden"><p id="ctripLoginMessage"></p><div class="verify-actions"><button id="sendCtripCode" type="button">发送短信验证码</button><button id="refreshCtripLogin" class="secondary" type="button">刷新状态</button></div><p class="verify-tip">下方是服务器上的真实携程浏览器。请直接用鼠标拖动拼图、点选图片或点击发送验证码，系统会在登录成功后自动保存会话。</p><div id="vncScreen" class="vnc-screen hidden"></div><details><summary>备用静态验证画面</summary><img id="ctripScreenshot" class="interactive-shot" alt="可点击的携程安全验证画面"></details><form id="ctripCodeForm"><input id="ctripCode" class="plain-input" inputmode="numeric" autocomplete="one-time-code" placeholder="短信或图片验证码"><button type="submit">提交验证码</button></form></div>
     </section>

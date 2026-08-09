@@ -13,6 +13,7 @@ import { validateProduct } from './validate.js';
 import { createRecord, getRecord, listRecords, updateRecord, updateRecordState } from './store.js';
 import { createAccessAuth } from './access-auth.js';
 import { CtripLoginManager } from './ctrip-login-manager.js';
+import { importCtripSession } from './ctrip-session-importer.js';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
@@ -29,6 +30,14 @@ app.use('/novnc', express.static(path.resolve(here, '..', 'node_modules', '@novn
 app.get('/api/access/status', (req, res) => res.json({ authenticationRequired: access.enabled, authenticated: access.authenticated(req) }));
 app.post('/api/access/login', (req, res) => access.login(req, res));
 app.post('/api/access/logout', (req, res) => access.logout(req, res));
+// Browser extensions cannot reuse the employee website's HttpOnly session cookie.
+// Authenticate this one endpoint with the same internal password instead.
+app.post('/api/ctrip-session/import', async (req, res, next) => {
+  try {
+    if (!access.verifyPassword(req.get('X-Access-Password'))) return res.status(401).json({ error: '内部访问密码错误' });
+    res.json(await importCtripSession(req.body?.cookies, { origins: req.body?.origins }));
+  } catch (error) { next(error); }
+});
 app.use('/api', access.requireAccess);
 
 app.post('/api/ctrip-login/start', async (req, res, next) => {

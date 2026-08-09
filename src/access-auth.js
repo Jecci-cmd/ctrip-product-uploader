@@ -33,6 +33,10 @@ export function createAccessAuth({ password = process.env.APP_ACCESS_PASSWORD, s
     return res.status(401).json({ error: '请先登录员工系统' });
   }
 
+  function verifyPassword(candidate) {
+    return !enabled || equalSecret(candidate, password);
+  }
+
   function login(req, res) {
     if (!enabled) return res.json({ ok: true, authenticationRequired: false });
     if (!equalSecret(req.body?.password, password)) return res.status(401).json({ error: '访问密码错误' });
@@ -49,5 +53,5 @@ export function createAccessAuth({ password = process.env.APP_ACCESS_PASSWORD, s
     res.json({ ok: true });
   }
 
-  return { enabled, authenticated, requireAccess, login, logout };
+  return { enabled, authenticated, requireAccess, verifyPassword, login, logout };
 }

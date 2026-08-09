@@ -1,0 +1,14 @@
+:root { color-scheme: light; font-family: system-ui, "Microsoft YaHei", sans-serif; }
+body { margin: 0; width: 360px; color: #172033; background: #f6f8fc; }
+main { padding: 18px; }
+h1 { margin: 0 0 12px; font-size: 20px; }
+ol { margin: 0 0 16px; padding-left: 22px; font-size: 13px; line-height: 1.7; }
+label { display: block; margin: 10px 0; font-size: 13px; font-weight: 600; }
+input { box-sizing: border-box; width: 100%; margin-top: 5px; padding: 10px; border: 1px solid #c9d2e3; border-radius: 8px; background: white; }
+button { width: 100%; margin-top: 10px; padding: 11px; border: 0; border-radius: 8px; color: white; background: #1769e0; font-weight: 700; cursor: pointer; }
+button:disabled { opacity: .55; cursor: wait; }
+.secondary { color: #1769e0; background: #e7effc; }
+#message { min-height: 20px; font-size: 13px; line-height: 1.5; }
+#message.error { color: #b42318; }
+#message.success { color: #067647; }
+small { display: block; color: #667085; line-height: 1.5; }
